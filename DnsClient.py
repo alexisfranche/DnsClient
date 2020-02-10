@@ -1,8 +1,9 @@
 import sys, argparse
 import socket
+import dns.resolver
 
 def main():
-    try:
+    #try:
       parser = argparse.ArgumentParser()
       parser.add_argument('-t', nargs='?', default=5)
       parser.add_argument('-r', nargs='?', default=3)
@@ -28,16 +29,19 @@ def main():
       Server: {1}\n
       Request type: {2}
       """.format(args['name'], args['@server'], request_type))
-
-      #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      #s.connect(('www.mcgill.ca', 80))
       
-      #s.close()
+      dns_list = []
+      dns_list.append(args['@server'])
+      my_resolver = dns.resolver.Resolver()
+      my_resolver.nameservers = dns_list
+      answers = my_resolver.query(args['name'])
+      for answer in answers:
+          print(answer.to_text())
       
-
-    except:
-      print('python DnsClient.py [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name')
-      sys.exit(2)
+    
+    #except:
+    #  print('python DnsClient.py [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name')
+    #  sys.exit(2)
     
 
 
