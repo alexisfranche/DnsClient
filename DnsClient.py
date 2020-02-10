@@ -2,7 +2,7 @@ import sys, argparse
 import socket
 
 def main():
-    #try:
+    try:
       parser = argparse.ArgumentParser()
       parser.add_argument('-t', nargs='?', default=5)
       parser.add_argument('-r', nargs='?', default=3)
@@ -35,9 +35,9 @@ def main():
       #s.close()
       
 
-    #except:
-    #  print('python DnsClient.py [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name')
-    #  sys.exit(2)
+    except:
+      print('python DnsClient.py [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name')
+      sys.exit(2)
     
 
 
