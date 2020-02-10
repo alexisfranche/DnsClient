@@ -51,12 +51,23 @@ def main():
 
       print("Response received after {0} ({1} retries)\n".format(timer, i))
       print("***Answer Section ({0} records)***\n".format(len(answers)))
-      
+
+      if request_type is "A":
+          label = 'IP'
+      else:
+          label = request_type
+
+      if answers.canonical_name is not None:
+          print("CNAME    {0}\t{1}\t{2}".format(answers.canonical_name, "[seconds can cache]", "[auth | nonauth]"))
+
       for answer in answers:
-        print("IP    {0}\t{1}\t{2}".format(answer.to_text(), "[seconds can cache]", "[auth | nonauth]"))
-      print(answers.rrset)
+        print("{3}    {0}\t{1}\t{2}".format(answer.to_text(), "[seconds can cache]", "[auth | nonauth]", label))
+
+      #print("------------------------------") 
+      #print(answers.rrset)
       #print("------------------------------")
-      #print(answers.response)      
+
+      print("***Additional Section ({0} records)".format(len(answers.response.additional)))
     
     #except:
     #  print('python DnsClient.py [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name')
