@@ -1,6 +1,7 @@
 import sys, argparse
 import socket
 import dns.resolver
+import time
 
 def main():
     #try:
@@ -32,12 +33,30 @@ def main():
       
       dns_list = []
       dns_list.append(args['@server'])
+
       my_resolver = dns.resolver.Resolver()
       my_resolver.nameservers = dns_list
-      answers = my_resolver.query(args['name'])
-      for answer in answers:
-          print(answer.to_text())
       
+      dns_start = time.perf_counter() # start time
+      
+      i = 0
+      num_retries = args['r']
+      for i in range(num_retries):
+        answers = my_resolver.query(args['name'], request_type)
+        if answers is not None:
+            break
+      
+      dns_end = time.perf_counter() # end timer
+      timer = (dns_end - dns_start) # get time to complete request
+
+      print("Response received after {0} ({1} retries)\n".format(timer, i))
+      print("***Answer Section ({0} records)***\n".format(len(answers)))
+      
+      for answer in answers:
+        print("IP    {0}\t{1}\t{2}".format(answer.to_text(), "[seconds can cache]", "[auth | nonauth]"))
+      print(answers.rrset)
+      #print("------------------------------")
+      #print(answers.response)      
     
     #except:
     #  print('python DnsClient.py [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name')
