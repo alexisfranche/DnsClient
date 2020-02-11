@@ -49,7 +49,14 @@ def main():
       dns_end = time.perf_counter() # end timer
       timer = (dns_end - dns_start) # get time to complete request
 
+      if answers is None:
+          raise Exception()
+
       print("Response received after {0} ({1} retries)\n".format(timer, i))
+
+      if answers.canonical_name is not None:
+          print("CNAME    {0}\t{1}\t{2}\n".format(answers.canonical_name, "[seconds can cache]", "[auth | nonauth]"))
+
       print("***Answer Section ({0} records)***\n".format(len(answers)))
 
       if request_type is "A":
@@ -57,11 +64,8 @@ def main():
       else:
           label = request_type
 
-      if answers.canonical_name is not None:
-          print("CNAME    {0}\t{1}\t{2}".format(answers.canonical_name, "[seconds can cache]", "[auth | nonauth]"))
-
       for answer in answers:
-        print("{3}    {0}\t{1}\t{2}".format(answer.to_text(), "[seconds can cache]", "[auth | nonauth]", label))
+        print("{3}    {0}\t{1}\t{2}\n".format(answer.to_text(), "[seconds can cache]", "[auth | nonauth]", label))
 
       #print("------------------------------") 
       #print(answers.rrset)
