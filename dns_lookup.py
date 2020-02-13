@@ -2,6 +2,7 @@ import socket
 import ipaddress
 import argparse
 import time
+import binascii
 
 
 def parse_dns_string(reader, data):
@@ -112,6 +113,9 @@ def parse_dns_response(res, dq_len, req):
 
     result = {}
     res_num = to_int(data[6:8])
+    tmp = bin(to_int(data[2:4]))
+    AA = tmp[7]
+    result.update({'AA': AA})
     for i in range(res_num):
         reader.read(2)
         type_num = to_int(reader.read(2))
@@ -146,29 +150,26 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
 
     req = make_dns_request_data(dns_query, request_type)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(timeout)
+    #sock.settimeout(timeout)
 
-    try:
-        dns_start = time.perf_counter() # start time
-        
-        i = 0
-        for i in range(num_retries):
-            sock.sendto(req, (address, port))
-            res, _ = sock.recvfrom(1024 * 4)
-            if res is not None:
-                break
+    dns_start = time.perf_counter() # start time
+    
+    i = 0
+    for i in range(num_retries):
+        sock.sendto(req, (address, port))
+        res, _ = sock.recvfrom(1024 * 4)
+        if res is not None:
+            break
 
-        if i == num_retries:
-            raise Exception("ERROR Maximum number of retries {0} exceeded".format(num_retries))
-        
-        dns_end = time.perf_counter() # end time
-        timer = (dns_end - dns_start)
-        print("Response received after {0} ({1} retries)\n".format(timer, i))
-        result = parse_dns_response(res, dq_len, req)
-    except Exception:
-        return
-    finally:
-        sock.close()
+    if i == num_retries:
+        raise Exception("ERROR Maximum number of retries {0} exceeded".format(num_retries))
+    
+    dns_end = time.perf_counter() # end time
+    timer = (dns_end - dns_start)
+    print("Response received after {0} ({1} retries)\n".format(timer, i))
+    result = parse_dns_response(res, dq_len, req)
+
+    sock.close()
 
     return result
 
@@ -182,7 +183,6 @@ def main():
     parser.add_argument('@server')
     parser.add_argument('name')
     args = vars(parser.parse_args())
-    
     if (args['mx'] == True) and (args['ns'] == True):
         raise Exception('-mx or -ns can be specified not both.')
     elif args['mx'] == True:
@@ -191,7 +191,6 @@ def main():
         request_type = 'NS'
     else:
         request_type = 'A'
-
     print("""
       DnsClient sending request for {0}\n
       Server: {1}\n
@@ -199,7 +198,6 @@ def main():
       """.format(args['name'], args['@server'], request_type))
 
     print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r']), request_type, int(args['t'])))
-
 
 if __name__ == '__main__':
     main()
