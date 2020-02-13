@@ -77,7 +77,7 @@ def make_dns_request_data(dns_query, request_type):
     elif request_type == 'MX':
         req += b'\x00\x0f' # byte for MX
     else:
-        req += b'\x00\x0f' # bytes for NS
+        req += b'\x00\x02' # bytes for NS
 
     req += b'\x00\x01' #QCLASS should be 00 01
     return req
