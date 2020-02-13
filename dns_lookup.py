@@ -62,10 +62,24 @@ def make_dns_query_domain(domain):
     return ''.join(parts).encode()
 
 
-def make_dns_request_data(dns_query):
-    req = b'\xaa\xbb\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00'
-    req += dns_query
-    req += b'\x00\x00\x01\x00\x01'
+def make_dns_request_data(dns_query, request_type):
+    req = b'\xaa\xbb' #ID 
+    req += b'\x01\x00' #LOTS OF STUFF (review)
+    req += b'\x00\x01' #QDCOUNT should be 1 whatever that means
+    req += b'\x00\x00' #ANCOUNT
+    req += b'\x00\x00' #NSCOUNT can ignore whatever is in here
+    req += b'\x00\x00' #ARCOUNT 
+    req += dns_query #QNAME
+    req += b'\x00' #signal termination of QNAME
+
+    if request_type == 'A':
+        req += b'\x00\x01' #QTYPE Modify depending on input  (A CHANGER)
+    elif request_type == 'MX':
+        req += b'\x00\x0f' # byte for MX
+    else:
+        req += b'\x00\x0f' # bytes for NS
+
+    req += b'\x00\x01' #QCLASS should be 00 01
     return req
 
 
@@ -112,11 +126,11 @@ def parse_dns_response(res, dq_len, req):
     return result
 
 
-def dns_lookup(domain, address, port, num_retries):
+def dns_lookup(domain, address, port, num_retries, request_type):
     dns_query = make_dns_query_domain(domain)
     dq_len = len(dns_query)
 
-    req = make_dns_request_data(dns_query)
+    req = make_dns_request_data(dns_query, request_type)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(2)
 
@@ -169,7 +183,7 @@ def main():
       Request type: {2}
       """.format(args['name'], args['@server'], request_type))
 
-    print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r'])))
+    print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r']), request_type))
 
 
 if __name__ == '__main__':
