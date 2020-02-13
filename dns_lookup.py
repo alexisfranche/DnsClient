@@ -77,7 +77,7 @@ def make_dns_request_data(dns_query, request_type):
     elif request_type == 'MX':
         req += b'\x00\x0f' # byte for MX
     else:
-        req += b'\x00\x0f' # bytes for NS
+        req += b'\x00\x02' # bytes for NS
 
     req += b'\x00\x01' #QCLASS should be 00 01
     return req
@@ -123,7 +123,7 @@ def parse_dns_response(res, dq_len, req):
             type_ = 'NS'
         elif type_num == 5:
             type_ = 'CNAME'
-        else:
+        elif type_num == 15:
             type_ = 'MX'
 
         reader.read(6)
