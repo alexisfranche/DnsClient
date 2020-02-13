@@ -126,13 +126,13 @@ def parse_dns_response(res, dq_len, req):
     return result
 
 
-def dns_lookup(domain, address, port, num_retries, request_type):
+def dns_lookup(domain, address, port, num_retries, request_type, timeout):
     dns_query = make_dns_query_domain(domain)
     dq_len = len(dns_query)
 
     req = make_dns_request_data(dns_query, request_type)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(2)
+    sock.settimeout(timeout)
 
     try:
         dns_start = time.perf_counter() # start time
@@ -143,7 +143,9 @@ def dns_lookup(domain, address, port, num_retries, request_type):
             res, _ = sock.recvfrom(1024 * 4)
             if res is not None:
                 break
-        
+
+        if i == num_retries:
+            raise Exception("ERROR Maximum number of retries {0} exceeded".format(num_retries))
         
         dns_end = time.perf_counter() # end time
         timer = (dns_end - dns_start)
@@ -183,7 +185,7 @@ def main():
       Request type: {2}
       """.format(args['name'], args['@server'], request_type))
 
-    print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r']), request_type))
+    print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r']), request_type, int(args['t'])))
 
 
 if __name__ == '__main__':
