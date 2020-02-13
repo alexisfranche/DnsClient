@@ -86,6 +86,10 @@ def make_dns_request_data(dns_query, request_type):
 def add_record_to_result(result, type_, data, reader):
     if type_ == 'A':
         item = str(ipaddress.IPv4Address(data))
+    elif type_ == 'MX':
+        item = parse_dns_string(reader, data)
+    elif type_ == 'NS':
+        item = parse_dns_string(reader, data)
     elif type_ == 'CNAME':
         item = parse_dns_string(reader, data)
     else:
@@ -115,8 +119,12 @@ def parse_dns_response(res, dq_len, req):
         type_ = None
         if type_num == 1:
             type_ = 'A'
+        elif type_num == 2:
+            type_ = 'NS'
         elif type_num == 5:
             type_ = 'CNAME'
+        else:
+            type_ = 'MX'
 
         reader.read(6)
         data = reader.read(2)
@@ -125,6 +133,12 @@ def parse_dns_response(res, dq_len, req):
 
     return result
 
+
+def format_hex(hex):
+    """format_hex returns a pretty version of a hex string"""
+    octets = [hex[i:i+2] for i in range(0, len(hex), 2)]
+    pairs = [" ".join(octets[i:i+2]) for i in range(0, len(octets), 2)]
+    return "\n".join(pairs)
 
 def dns_lookup(domain, address, port, num_retries, request_type, timeout):
     dns_query = make_dns_query_domain(domain)
@@ -157,7 +171,6 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
         sock.close()
 
     return result
-
 
 def main():
     parser = argparse.ArgumentParser()
