@@ -1,5 +1,7 @@
 import socket
 import ipaddress
+import argparse
+import time
 
 
 def parse_dns_string(reader, data):
@@ -110,7 +112,7 @@ def parse_dns_response(res, dq_len, req):
     return result
 
 
-def dns_lookup(domain, address):
+def dns_lookup(domain, address, port, num_retries):
     dns_query = make_dns_query_domain(domain)
     dq_len = len(dns_query)
 
@@ -119,8 +121,19 @@ def dns_lookup(domain, address):
     sock.settimeout(2)
 
     try:
-        sock.sendto(req, (address, 53))
-        res, _ = sock.recvfrom(1024 * 4)
+        dns_start = time.perf_counter() # start time
+        
+        i = 0
+        for i in range(num_retries):
+            sock.sendto(req, (address, port))
+            res, _ = sock.recvfrom(1024 * 4)
+            if res is not None:
+                break
+        
+        
+        dns_end = time.perf_counter() # end time
+        timer = (dns_end - dns_start)
+        print("Response received after {0} ({1} retries)\n".format(timer, i))
         result = parse_dns_response(res, dq_len, req)
     except Exception:
         return
@@ -130,5 +143,34 @@ def dns_lookup(domain, address):
     return result
 
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', nargs='?', default=5)
+    parser.add_argument('-r', nargs='?', default=3)
+    parser.add_argument('-p', nargs='?', default=53)
+    parser.add_argument('-mx', action='store_true')
+    parser.add_argument('-ns',  action='store_true')
+    parser.add_argument('@server')
+    parser.add_argument('name')
+    args = vars(parser.parse_args())
+    
+    if (args['mx'] == True) and (args['ns'] == True):
+        raise Exception('-mx or -ns can be specified not both.')
+    elif args['mx'] == True:
+        request_type = 'MX'
+    elif args['ns'] == True:
+        request_type = 'NS'
+    else:
+        request_type = 'A'
+
+    print("""
+      DnsClient sending request for {0}\n
+      Server: {1}\n
+      Request type: {2}
+      """.format(args['name'], args['@server'], request_type))
+
+    print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r'])))
+
+
 if __name__ == '__main__':
-    print(dns_lookup('www.stackoverflow.com', "8.8.8.8"))
+    main()
