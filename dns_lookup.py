@@ -70,7 +70,6 @@ def make_dns_request_data(dns_query, request_type):
     req += b'\x00\x00' #NSCOUNT can ignore whatever is in here
     req += b'\x00\x00' #ARCOUNT 
     req += dns_query #QNAME
-    print("dns_query ",dns_query)
     req += b'\x00' #signal termination of QNAME
 
     if request_type == 'A':
@@ -102,6 +101,7 @@ def parse_dns_response(res, dq_len, req):
         return s[12:12+dq_len]
 
     data = reader.read(len(req))
+    print("data ",data[12:18])
     assert(get_query(data) == get_query(req))
 
     def to_int(bytes_):
