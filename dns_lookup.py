@@ -4,6 +4,7 @@ import argparse
 import time
 import binascii
 
+authority = 0
 
 def parse_dns_string(reader, data):
     res = ''
@@ -99,26 +100,46 @@ def add_record_to_result(result, type_, data, reader):
     result.setdefault(type_, []).append(item)
 
 
-def parse_dns_response(res, dq_len, req):
+def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
     reader = StreamReader(res)
-
+    x = len(reader.data)
+    print("len ",x)
+    print("req ", req)
     def get_query(s):
         return s[12:12+dq_len]
 
     data = reader.read(len(req))
-    assert(get_query(data) == get_query(req))
+    print("Entirety: ", res)
+    assert(get_query(data) == get_query(req))#check same beginning
 
     def to_int(bytes_):
         return int.from_bytes(bytes_, 'big')
 
     result = {}
-    res_num = to_int(data[6:8])
+    res_num = to_int(data[6:8])     #number of records
     tmp = bin(to_int(data[2:4]))
     AA = tmp[7]
+    if(AA == 0):
+        authority = "nonauth"
+    else:
+        authority = "auth"
     result.update({'AA': AA})
+
+
+    #get TLL
+    # start = 12 + dq_len + 1 + 4 + 2 + 4 #starts at 0 
+    # print("TTL ", res[start:start+4])
+    # TLL = to_int(res[start : start + 4])
+    # result.update({'TTL': TLL})
+    #get TLLs
+
+    print("***Answer Section ({0} records)".format(res_num-1))
+
     for i in range(res_num):
-        reader.read(2)
-        type_num = to_int(reader.read(2))
+        #Answer
+        a = reader.read(2)#NAME
+        print("a ", a)
+        type_num = to_int(reader.read(2)) #TYPE
 
         type_ = None
         if type_num == 1:
@@ -130,12 +151,40 @@ def parse_dns_response(res, dq_len, req):
         elif type_num == 15:
             type_ = 'MX'
 
-        reader.read(6)
-        data = reader.read(2)
-        data = reader.read(to_int(data))
-        add_record_to_result(result, type_, data, reader)
+        b = reader.read(2) #CLASS 
+        TTL = to_int(reader.read(4)) #TTL
+        datalen = to_int(reader.read(2)) #RDLENGTH
+
+        if type_ == 'MX':
+            pref = to_int(reader.read(2))#PREF
+            data = reader.read(datalen-2)#EXCHANGE
+        else:        
+            data = reader.read(datalen)#RDATA
+    
+        #add_record_to_result(result, type_, data, reader)
+
+        if type_ == 'A':
+            item = str(ipaddress.IPv4Address(data))
+            print("IP   {0}   {1}   {2}".format(item,TTL,authority))
+        elif type_ == 'MX':
+            item = parse_dns_string(reader, data)
+            print("MX   {0}   {1}   {2}   {3}".format(item, pref, TTL, authority))
+        elif type_ == 'NS':
+            item = parse_dns_string(reader, data)
+            print("NS   {0}   {1}   {2}".format(item, TTL, authority))
+        elif type_ == 'CNAME':
+            item = parse_dns_string(reader, data)
+            print("CNAME    {0}   {1}   {2}".format(item,TTL, authority))
+        else:
+            return
+
+        result.setdefault(type_, []).append(item)
+
+
 
     return result
+
+
 
 
 def format_hex(hex):
@@ -167,6 +216,8 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
     dns_end = time.perf_counter() # end time
     timer = (dns_end - dns_start)
     print("Response received after {0} ({1} retries)\n".format(timer, i))
+    print("res from socket ", res)
+    print("len res ", len(res))
     result = parse_dns_response(res, dq_len, req)
 
     sock.close()
