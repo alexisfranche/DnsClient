@@ -83,19 +83,19 @@ def make_dns_request_data(dns_query, request_type):
     return req
 
 
-def add_record_to_result(result, type_, data, reader):
-    if type_ == 'A':
-        item = str(ipaddress.IPv4Address(data))
-    elif type_ == 'MX':
-        item = parse_dns_string(reader, data)
-    elif type_ == 'NS':
-        item = parse_dns_string(reader, data)
-    elif type_ == 'CNAME':
-        item = parse_dns_string(reader, data)
-    else:
-        return
+# def add_record_to_result(result, type_, data, reader):
+#     if type_ == 'A':
+#         item = str(ipaddress.IPv4Address(data))
+#     elif type_ == 'MX':
+#         item = parse_dns_string(reader, data)
+#     elif type_ == 'NS':
+#         item = parse_dns_string(reader, data)
+#     elif type_ == 'CNAME':
+#         item = parse_dns_string(reader, data)
+#     else:
+#         return
 
-    result.setdefault(type_, []).append(item)
+#     result.setdefault(type_, []).append(item)
 
 
 def parse_dns_response(res, dq_len, req):
@@ -105,7 +105,6 @@ def parse_dns_response(res, dq_len, req):
         return s[12:12+dq_len]
 
     data = reader.read(len(req))
-    print("data ",data[12:18])
     assert(get_query(data) == get_query(req))
 
     def to_int(bytes_):
@@ -117,14 +116,15 @@ def parse_dns_response(res, dq_len, req):
     AA = tmp[7]
     result.update({'AA': AA})
 
-    print(res)
-    print("----------")
     #get TLL
-    start = 12 + dq_len + 1 + 4 #starts at 0 
-    print(res[start:start+4])
+    print(res)
+    start = 12 + dq_len + 1 + 4 + 2 + 4 #starts at 0 
+    print("TTL: ",res[start:start+4])
     TLL = to_int(res[start : start + 4])
     result.update({'TTL': TLL})
     #get TLLs
+
+    print("***Answer Section ({0} records)".format(res_num-1))
 
     for i in range(res_num):
         reader.read(2)
@@ -143,7 +143,22 @@ def parse_dns_response(res, dq_len, req):
         reader.read(6)
         data = reader.read(2)
         data = reader.read(to_int(data))
-        add_record_to_result(result, type_, data, reader)
+        #add_record_to_result(result, type_, data, reader)
+
+        if type_ == 'A':
+            item = str(ipaddress.IPv4Address(data))
+        elif type_ == 'MX':
+            item = parse_dns_string(reader, data)
+        elif type_ == 'NS':
+            item = parse_dns_string(reader, data)
+        elif type_ == 'CNAME':
+            item = parse_dns_string(reader, data)
+        else:
+            return
+
+        result.setdefault(type_, []).append(item)
+
+
 
     return result
 
@@ -173,6 +188,8 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
     print("Response received after {0} ({1} retries)\n".format(timer, i))
     result = parse_dns_response(res, dq_len, req)
     sock.close()
+
+    
 
     return result
 
@@ -209,6 +226,7 @@ def main():
       """.format(args['name'], args['@server'], request_type))
 
     print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r']), request_type, int(args['t'])))
+
 
 
 if __name__ == '__main__':
