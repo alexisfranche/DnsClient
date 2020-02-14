@@ -86,6 +86,10 @@ def make_dns_request_data(dns_query, request_type):
 def add_record_to_result(result, type_, data, reader):
     if type_ == 'A':
         item = str(ipaddress.IPv4Address(data))
+    elif type_ == 'MX':
+        item = parse_dns_string(reader, data)
+    elif type_ == 'NS':
+        item = parse_dns_string(reader, data)
     elif type_ == 'CNAME':
         item = parse_dns_string(reader, data)
     else:
@@ -109,6 +113,19 @@ def parse_dns_response(res, dq_len, req):
 
     result = {}
     res_num = to_int(data[6:8])
+    tmp = bin(to_int(data[2:4]))
+    AA = tmp[7]
+    result.update({'AA': AA})
+
+    print(res)
+    print("----------")
+    #get TLL
+    start = 12 + dq_len + 1 + 4 #starts at 0 
+    print(res[start:start+4])
+    TLL = to_int(res[start : start + 4])
+    result.update({'TTL': TLL})
+    #get TLLs
+
     for i in range(res_num):
         reader.read(2)
         type_num = to_int(reader.read(2))
@@ -116,8 +133,12 @@ def parse_dns_response(res, dq_len, req):
         type_ = None
         if type_num == 1:
             type_ = 'A'
+        elif type_num == 2:
+            type_ = 'NS'
         elif type_num == 5:
             type_ = 'CNAME'
+        elif type_num == 15:
+            type_ = 'MX'
 
         reader.read(6)
         data = reader.read(2)
@@ -135,30 +156,31 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
 
-    try:
-        dns_start = time.perf_counter() # start time
-        
-        i = 0
-        for i in range(num_retries):
-            sock.sendto(req, (address, port))
-            res, _ = sock.recvfrom(1024 * 4)
-            if res is not None:
-                break
+    dns_start = time.perf_counter() # start time
+    
+    i = 0
+    for i in range(num_retries):
+        sock.sendto(req, (address, port))
+        res, _ = sock.recvfrom(1024 * 4)
+        if res is not None:
+            break
 
-        if i == num_retries:
-            raise Exception("ERROR Maximum number of retries {0} exceeded".format(num_retries))
-        
-        dns_end = time.perf_counter() # end time
-        timer = (dns_end - dns_start)
-        print("Response received after {0} ({1} retries)\n".format(timer, i))
-        result = parse_dns_response(res, dq_len, req)
-    except Exception:
-        return
-    finally:
-        sock.close()
+    if i == num_retries:
+        raise Exception("ERROR Maximum number of retries {0} exceeded".format(num_retries))
+    
+    dns_end = time.perf_counter() # end time
+    timer = (dns_end - dns_start)
+    print("Response received after {0} ({1} retries)\n".format(timer, i))
+    result = parse_dns_response(res, dq_len, req)
+    sock.close()
 
     return result
 
+def format_hex(hex):
+    """format_hex returns a pretty version of a hex string"""
+    octets = [hex[i:i+2] for i in range(0, len(hex), 2)]
+    pairs = [" ".join(octets[i:i+2]) for i in range(0, len(octets), 2)]
+    return "\n".join(pairs)
 
 def main():
     parser = argparse.ArgumentParser()
