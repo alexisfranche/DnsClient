@@ -117,14 +117,12 @@ def parse_dns_response(res, dq_len, req):
     result.update({'AA': AA})
 
     #get TLL
-    print(res)
     start = 12 + dq_len + 1 + 4 + 2 + 4 #starts at 0 
-    print("TTL: ",res[start:start+4])
     TLL = to_int(res[start : start + 4])
     result.update({'TTL': TLL})
     #get TLLs
 
-    print("***Answer Section ({0} records)".format(res_num-1))
+    print("***Answer Section ({0} records)".format(res_num))
 
     for i in range(res_num):
         reader.read(2)
@@ -147,15 +145,18 @@ def parse_dns_response(res, dq_len, req):
 
         if type_ == 'A':
             item = str(ipaddress.IPv4Address(data))
+            print("IP   {0}   {1}   {2}".format(item, TLL, AA))
         elif type_ == 'MX':
             item = parse_dns_string(reader, data)
+            print("MX   {0}   {1}   {2}".format(item, TLL, AA))
         elif type_ == 'NS':
             item = parse_dns_string(reader, data)
+            print("NS   {0}   {1}   {2}".format(item, TLL, AA))
         elif type_ == 'CNAME':
             item = parse_dns_string(reader, data)
+            print("CNAME   {0}   {1}   {2}".format(item, TLL, AA))
         else:
             return
-
         result.setdefault(type_, []).append(item)
 
 
@@ -182,36 +183,37 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
 
     if i == num_retries:
         raise Exception("ERROR Maximum number of retries {0} exceeded".format(num_retries))
+    elif res is None:
+        raise Exception("ERROR  empty response.")
     
     dns_end = time.perf_counter() # end time
     timer = (dns_end - dns_start)
-    print("Response received after {0} ({1} retries)\n".format(timer, i))
-    result = parse_dns_response(res, dq_len, req)
+    print("Response received after {0} seconds ({1} retries)\n".format(timer, i))
+    result = parse_dns_response(res, dq_len, req)  
     sock.close()
 
     
 
     return result
 
-def format_hex(hex):
-    """format_hex returns a pretty version of a hex string"""
-    octets = [hex[i:i+2] for i in range(0, len(hex), 2)]
-    pairs = [" ".join(octets[i:i+2]) for i in range(0, len(octets), 2)]
-    return "\n".join(pairs)
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-t', nargs='?', default=5)
-    parser.add_argument('-r', nargs='?', default=3)
-    parser.add_argument('-p', nargs='?', default=53)
-    parser.add_argument('-mx', action='store_true')
-    parser.add_argument('-ns',  action='store_true')
-    parser.add_argument('@server')
-    parser.add_argument('name')
-    args = vars(parser.parse_args())
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-t', nargs='?', default=5)
+        parser.add_argument('-r', nargs='?', default=3)
+        parser.add_argument('-p', nargs='?', default=53)
+        parser.add_argument('-mx', action='store_true')
+        parser.add_argument('-ns',  action='store_true')
+        parser.add_argument('@server')
+        parser.add_argument('name')
+        args = vars(parser.parse_args())
+    except SystemExit:
+        print("ERROR Incorrect input syntax")
+        exit()
     
     if (args['mx'] == True) and (args['ns'] == True):
-        raise Exception('-mx or -ns can be specified not both.')
+        raise Exception('Error   -mx or -ns can be specified, but not both.')
     elif args['mx'] == True:
         request_type = 'MX'
     elif args['ns'] == True:
@@ -225,8 +227,9 @@ def main():
       Request type: {2}
       """.format(args['name'], args['@server'], request_type))
 
-    print(dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r']), request_type, int(args['t'])))
-
+    result = dns_lookup(args['name'], args['@server'], int(args['p']), int(args['r']), request_type, int(args['t']))
+    if result is None or result is '':
+        raise Exception("ERROR  could not build result output")
 
 
 if __name__ == '__main__':
