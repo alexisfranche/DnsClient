@@ -115,6 +115,16 @@ def parse_dns_response(res, dq_len, req):
     tmp = bin(to_int(data[2:4]))
     AA = tmp[7]
     result.update({'AA': AA})
+
+    print(res)
+    print("----------")
+    #get TLL
+    start = 12 + dq_len + 1 + 4 #starts at 0 
+    print(res[start:start+4])
+    TLL = to_int(res[start : start + 4])
+    result.update({'TTL': TLL})
+    #get TLLs
+
     for i in range(res_num):
         reader.read(2)
         type_num = to_int(reader.read(2))
@@ -165,6 +175,11 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
 
     return result
 
+def format_hex(hex):
+    """format_hex returns a pretty version of a hex string"""
+    octets = [hex[i:i+2] for i in range(0, len(hex), 2)]
+    pairs = [" ".join(octets[i:i+2]) for i in range(0, len(octets), 2)]
+    return "\n".join(pairs)
 
 def main():
     parser = argparse.ArgumentParser()
