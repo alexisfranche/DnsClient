@@ -124,21 +124,10 @@ def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
     result.update({'AA': AA})
     authCount = to_int(data[8:10])
     addCount = to_int(data[10:12])
-    print("num auth ans ", authCount)
-    print("num add ans ", addCount)
 
 
 
-
-
-    #get TLL
-    # start = 12 + dq_len + 1 + 4 + 2 + 4 #starts at 0 
-    # print("TTL ", res[start:start+4])
-    # TLL = to_int(res[start : start + 4])
-    # result.update({'TTL': TLL})
-    #get TLLs
-
-    print("***Answer Section ({0} records)***".format(res_num))
+    print("***Answer Section ({0} records)***\n".format(res_num))
 
     for i in range(res_num):
         #Answer
@@ -159,7 +148,7 @@ def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
 
         b = reader.read(2) #CLASS 
         TTL = reader.read(4)
-        print("TTL ", TTL)
+        
         TTL = to_int(TTL)
         datalen = to_int(reader.read(2)) #RDLENGTH
 
@@ -173,16 +162,16 @@ def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
 
         if type_ == 'A':
             item = str(ipaddress.IPv4Address(data))
-            print("IP   {0}   {1}   {2}".format(item,TTL,authority))
+            print("IP   {0}   {1}   {2}\n".format(item,TTL,authority))
         elif type_ == 'MX':
             item = parse_dns_string(reader, data)
-            print("MX   {0}   {1}   {2}   {3}".format(item, pref, TTL, authority))
+            print("MX   {0}   {1}   {2}   {3}\n".format(item, pref, TTL, authority))
         elif type_ == 'NS':
             item = parse_dns_string(reader, data)
-            print("NS   {0}   {1}   {2}".format(item, TTL, authority))
+            print("NS   {0}   {1}   {2}\n".format(item, TTL, authority))
         elif type_ == 'CNAME':
             item = parse_dns_string(reader, data)
-            print("CNAME    {0}   {1}   {2}".format(item,TTL, authority))
+            print("CNAME    {0}   {1}   {2}\n".format(item,TTL, authority))
         
 
         result.setdefault(type_, []).append(item)
@@ -194,10 +183,10 @@ def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
         temp = reader.read(2)
         temp = reader.read(to_int(temp))
 
-    print("***Additional Section ({0} records)***".format(addCount))
+    print("***Additional Section ({0} records)***\n".format(addCount))
 
     if addCount == 0:
-        print("NOTFOUND")
+        print("NOTFOUND\n")
     else:
         for j in range(addCount):
                 #Answer
@@ -205,21 +194,23 @@ def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
             
             type_num = to_int(reader.read(2)) #TYPE
 
-            
-
             type_ = None
             if type_num == 1:
                 type_ = 'A'
+                
             elif type_num == 2:
                 type_ = 'NS'
+                
             elif type_num == 5:
                 type_ = 'CNAME'
+                
             elif type_num == 15:
                 type_ = 'MX'
+                
 
             b = reader.read(2) #CLASS 
             TTL = reader.read(4)
-            print("TTL ", TTL)
+            
             TTL = to_int(TTL)
             datalen = to_int(reader.read(2)) #RDLENGTH
 
@@ -233,16 +224,16 @@ def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
 
             if type_ == 'A':
                 item = str(ipaddress.IPv4Address(data))
-                print("IP   {0}   {1}   {2}".format(item,TTL,authority))
+                print("IP   {0}   {1}   {2}\n".format(item,TTL,authority))
             elif type_ == 'MX':
                 item = parse_dns_string(reader, data)
-                print("MX   {0}   {1}   {2}   {3}".format(item, pref, TTL, authority))
+                print("MX   {0}   {1}   {2}   {3}\n".format(item, pref, TTL, authority))
             elif type_ == 'NS':
                 item = parse_dns_string(reader, data)
-                print("NS   {0}   {1}   {2}".format(item, TTL, authority))
+                print("NS   {0}   {1}   {2}\n".format(item, TTL, authority))
             elif type_ == 'CNAME':
                 item = parse_dns_string(reader, data)
-                print("CNAME    {0}   {1}   {2}".format(item,TTL, authority))
+                print("CNAME    {0}   {1}   {2}\n".format(item,TTL, authority))
 
             result.setdefault(type_, []).append(item)
     
@@ -275,7 +266,6 @@ def dns_lookup(domain, address, port, num_retries, request_type, timeout):
     dns_end = time.perf_counter() # end time
     timer = (dns_end - dns_start)
     print("Response received after {0} ({1} retries)\n".format(timer, i))
-    print("res from socket ", res)
     result = parse_dns_response(res, dq_len, req)
 
     sock.close()
