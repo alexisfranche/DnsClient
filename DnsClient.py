@@ -117,7 +117,7 @@ def parse_dns_response(res, dq_len, req): #dq_len is length of our request query
     res_num = to_int(data[6:8])     #number of records
     tmp = bin(to_int(data[2:4]))
     AA = tmp[7]
-    if(AA == 0):
+    if(AA == '0'):
         authority = "nonauth"
     else:
         authority = "auth"
@@ -310,7 +310,7 @@ def main():
         Request type: {2}
         """.format(args['name'], args['@server'], request_type))
 
-        print(dns_client(args['name'], args['@server'], int(args['p']), int(args['r']), request_type, int(args['t'])))
+        dns_client(args['name'], args['@server'], int(args['p']), int(args['r']), request_type, int(args['t']))
     except Exception as e:
         print(e)
 
